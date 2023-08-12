@@ -15,6 +15,7 @@ async fn manual_hello() -> impl Responder {
 }
 
 pub fn create_test_handlers(cfg: &mut web::ServiceConfig) {
+    println!("Creating test handlers");
     cfg.service(
         web::scope("/test")
             .service(hello)

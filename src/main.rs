@@ -1,8 +1,7 @@
 mod rookrustpad;
 
 use actix_web::{App, HttpServer, middleware};
-
-use rookrustpad::api::configure_all_handlers;
+use rookrustpad::app_configuration::AppConfiguration;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -13,11 +12,13 @@ async fn main() -> std::io::Result<()> {
 
     println!("Starting server on {}:{}", listen_addr, listen_port);
 
-    HttpServer::new(|| {
+    let app_config = AppConfiguration::create_default();
+
+    HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
             .wrap(middleware::Compress::default())
-            .configure(configure_all_handlers)
+            .configure(|cfg| app_config.configure(cfg))
     })
     .bind((listen_addr, listen_port))?
     .run()
