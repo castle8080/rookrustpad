@@ -1,46 +1,45 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::read_dir;
+use std::time::SystemTime;
 
 use lazy_regex::regex;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 pub mod y2022;
-#[derive(Hash, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AocAnswer {
-    year: u32,
-    day: u32,
-    part: u8,
-    result: String,
-    log: String,
-    execution_time: u32,
+    pub year: u32,
+    pub day: u32,
+    pub part: u8,
+    pub result: Result<String, String>,
+    pub log: String,
+    pub execution_time: f64,
 }
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct AocProblem {
-    year: u32,
-    day: u32,
-    part: u8,
+    pub year: u32,
+    pub day: u32,
+    pub part: u8,
 }
 
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct AocInput {
-    year: u32,
-    day: u32,
-    part: u8,
-    input: String,
+    pub year: u32,
+    pub day: u32,
+    pub part: u8,
+    pub input: String,
 }
 
 type AocFunctionResult = Result<String, Box<dyn Error>>;
-type AocResult = Result<AocAnswer, Box<dyn Error>>;
 
-pub type AocFunction = fn(input_path: String, log: String) -> AocFunctionResult;
+pub type AocFunction= fn(input_path: String, log: &mut String) -> AocFunctionResult;
 
 #[derive(Debug)]
 pub struct AocService {
-    input_directory: String,
-    problem_answers: HashMap<AocProblem, AocFunction>,
+    pub input_directory: String,
+    pub problem_answers: HashMap<AocProblem, AocFunction>,
 }
 
 impl AocService {
@@ -66,6 +65,46 @@ impl AocService {
             },
             answer,
         );
+    }
+
+    pub fn get_answer(&self, year: u32, day: u32, part: u8) -> AocAnswer {
+        let input_file = format!("{}/{}/day_{}_{}.txt",
+            self.input_directory,
+            year,
+            day,
+            part);
+        
+        let mut log = String::new();
+        let problem = AocProblem { year: year, day: day, part: part };
+        let start_time = SystemTime::now();
+
+        let answer_from_result = |result: Result<String, String>, log: String| -> AocAnswer {
+            let d = SystemTime::now().duration_since(start_time).unwrap_or_default();
+            AocAnswer {
+                year: year,
+                day: day,
+                part: part,
+                log: log,
+                result: result,
+                execution_time: d.as_secs_f64()
+            } 
+        };
+
+        match self.problem_answers.get(&problem) {
+            None => {
+                answer_from_result(Err(String::from("Problem not found.")), log)
+            },
+            Some(answer_fn) => {
+                match answer_fn(input_file, &mut log) {
+                    Err(error) => {
+                        answer_from_result(Err(error.to_string()), log)
+                    },
+                    Ok(result) => {
+                        answer_from_result(Ok(result), log)
+                    }
+                }
+            }
+        }
     }
 
     pub fn list_problems(&self) -> Vec<AocProblem> {

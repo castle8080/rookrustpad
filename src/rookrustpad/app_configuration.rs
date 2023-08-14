@@ -1,6 +1,8 @@
 use actix_web::web;
 use std::sync::Arc;
 
+use crate::rookrustpad::page::configure_page_handlers;
+
 use crate::rookrustpad::service::aoc::AocService;
 
 use crate::rookrustpad::api::aoc_handler::create_aoc_handlers;
@@ -24,6 +26,7 @@ impl AppConfiguration {
         cfg.app_data(web::Data::new(self.aoc_service.clone()));
 
         println!("Configuring all handlers");
+        cfg.configure(configure_page_handlers);
         cfg.configure(create_test_handlers);
         cfg.configure(create_aoc_handlers);
         cfg.configure(create_static_handler);

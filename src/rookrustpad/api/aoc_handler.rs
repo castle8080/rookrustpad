@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use actix_web::{get, web, HttpResponse, Responder};
+use actix_web::{get, web, Responder};
 
 use crate::rookrustpad::service::aoc::AocService;
 use serde::{Deserialize, Serialize};
@@ -27,8 +27,8 @@ async fn get_answer(
     aoc_service: web::Data<Arc<AocService>>,
     request: web::Path<AocAnswerRequest>) -> impl Responder
 {
-    println!("Have request: {:?}", request);
-    HttpResponse::Ok().body("Hello world!")
+    let answer = aoc_service.get_answer(request.year, request.day, request.part);
+    web::Json(answer)
 }
 
 pub fn create_aoc_handlers(cfg: &mut web::ServiceConfig) {
