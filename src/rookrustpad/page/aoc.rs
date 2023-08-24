@@ -11,6 +11,7 @@ pub struct AocAnswerRequest {
     year: u32,
     day: u32,
     part: u8,
+    dataset: Option<String>,
 }
 
 #[get("/aoc")]
@@ -47,11 +48,26 @@ pub async fn index(aoc_service: web::Data<Arc<AocService>>) -> AwResult<Markup> 
 }
 
 #[get("/aoc/answer/{year}/{day}/{part}")]
-pub async fn answer(
+pub async fn answer_no_ds(
     aoc_service: web::Data<Arc<AocService>>,
     request: web::Path<AocAnswerRequest>) -> AwResult<Markup>
 {
-    let aoc_result = aoc_service.get_answer(request.year, request.day, request.part);
+    answer_aoc(aoc_service, request).await
+}
+
+#[get("/aoc/answer/{year}/{day}/{part}/{dataset}")]
+pub async fn answer_with_ds(
+    aoc_service: web::Data<Arc<AocService>>,
+    request: web::Path<AocAnswerRequest>) -> AwResult<Markup>
+{
+    answer_aoc(aoc_service, request).await
+}
+
+async fn answer_aoc(
+    aoc_service: web::Data<Arc<AocService>>,
+    request: web::Path<AocAnswerRequest>) -> AwResult<Markup>
+{
+    let aoc_result = aoc_service.get_answer(request.year, request.day, request.part, &request.dataset);
 
     Ok(html! {
         html {

@@ -10,6 +10,7 @@ struct AocAnswerRequest {
     year: u32,
     day: u32,
     part: u8,
+    dataset: Option<String>,
 }
 
 #[get("problems")]
@@ -27,7 +28,7 @@ async fn get_answer(
     aoc_service: web::Data<Arc<AocService>>,
     request: web::Path<AocAnswerRequest>) -> impl Responder
 {
-    let answer = aoc_service.get_answer(request.year, request.day, request.part);
+    let answer = aoc_service.get_answer(request.year, request.day, request.part, &request.dataset);
     web::Json(answer)
 }
 

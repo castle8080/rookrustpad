@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::error::Error;
+use std::fmt::Write;
 use std::fs::read_dir;
 use std::time::SystemTime;
 
@@ -67,12 +68,23 @@ impl AocService {
         );
     }
 
-    pub fn get_answer(&self, year: u32, day: u32, part: u8) -> AocAnswer {
-        let input_file = format!("{}/{}/day_{}_{}.txt",
-            self.input_directory,
-            year,
-            day,
-            part);
+    pub fn get_answer(&self, year: u32, day: u32, part: u8, dataset: &Option<String>) -> AocAnswer {
+
+        let input_file = match dataset {
+            Some(dsname) =>
+                format!("{}/{}/day_{}_{}.{}.txt",
+                    self.input_directory,
+                    year,
+                    day,
+                    part,
+                    dsname),
+            None =>
+                format!("{}/{}/day_{}_{}.txt",
+                    self.input_directory,
+                    year,
+                    day,
+                    part),
+        };
         
         let mut log = String::new();
         let problem = AocProblem { year: year, day: day, part: part };

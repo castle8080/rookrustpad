@@ -8,5 +8,6 @@ pub fn configure_page_handlers(cfg: &mut web::ServiceConfig) {
     cfg
         .service(index::index)
         .service(aoc::index)
-        .service(aoc::answer);
+        .service(aoc::answer_no_ds)
+        .service(aoc::answer_with_ds);
 }
