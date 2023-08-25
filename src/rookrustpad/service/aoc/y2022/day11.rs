@@ -8,35 +8,25 @@ use std::error::Error;
 
 use lazy_regex::regex;
 
-/*
-
-Monkey 0:
-  Starting items: 75, 75, 98, 97, 79, 97, 64
-  Operation: new = old * 13
-  Test: divisible by 19
-    If true: throw to monkey 2
-    If false: throw to monkey 7
-
- */
-
-
- #[derive(Debug)]
-enum Expression {
+ #[derive(Debug, Clone)]
+pub enum Expression {
     Old,
-    Number(u128),
+    Number(u64),
     Multiply(Box<Expression>, Box<Expression>),
     Add(Box<Expression>, Box<Expression>)
 }
 
 impl Expression {
-    pub fn eval(&self, old: u128) -> u128 {
-        match &self {
-            &Expression::Old => old,
-            &Expression::Number(n) => *n,
-            &Expression::Multiply(left, right) => {
-                left.eval(old) * right.eval(old)
-            },
-            &Expression::Add(left, right) => left.eval(old) + right.eval(old)
+    pub fn eval(&self, initial: u64) -> u64 {
+        match self {
+            Expression::Old =>
+                initial,
+            Expression::Number(n) =>
+                *n,
+            Expression::Multiply(left, right) =>
+                left.eval(initial) * right.eval(initial),
+            Expression::Add(left, right) =>
+                left.eval(initial) + right.eval(initial)
         }
     }
 }
@@ -44,9 +34,9 @@ impl Expression {
 #[derive(Debug)]
 struct MonkeyInfo {
     id: u32,
-    items: Vec<u128>,
+    items: Vec<u64>,
     expression: Expression,
-    test: u128,
+    test: u64,
     on_true: u32,
     on_false: u32,
     inspection_count: u32
@@ -62,40 +52,46 @@ impl MonkeyInfo {
         self.inspection_count = self.inspection_count + u32::try_from(self.items.len()).unwrap();
     }
 
-    pub fn reduce_worry(&mut self) {
-        for item in &mut self.items {
-            *item = *item / 3;
+    pub fn get_new_monkey_id(&self, item: u64) -> u32 {
+        if item % self.test == 0 {
+            self.on_true
+        }
+        else {
+            self.on_false
         }
     }
 
-    pub fn test_and_get_throws(&mut self) -> Vec<(u32, u128)> {
-        let moves: Vec<(u32, u128)> = self.items.iter().map(|item| {
-            let new_mid =
-                if (*item % self.test) == 0 {
-                    self.on_true
-                }
-                else {
-                    self.on_false
-                };
-            (new_mid, *item)
-        }).collect();
+    pub fn test_and_get_throws(&mut self) -> Vec<(u32, u64)> {
+        let items = core::mem::replace(&mut self.items, Vec::new());
+        let mut moves: Vec<(u32, u64)> = Vec::new();
 
-        self.items = Vec::new();
+        for item in items {
+            moves.push((self.get_new_monkey_id(item), item));
+        }
 
         moves
     }
 
-    pub fn read_all_from_file(input_path: &String) -> Result<Vec<MonkeyInfo>, Box<dyn Error>> {
+}
+
+struct MonkeyInfoParser {
+}
+
+impl MonkeyInfoParser {
+
+    pub fn read_all_from_file(input_path: &String) -> Result<Vec<MonkeyInfo>, Box<dyn Error>>
+    {
         let file = File::open(input_path)?;
         let mut reader = BufReader::new(file);
-        MonkeyInfo::read_all(&mut reader)
+        MonkeyInfoParser::read_all(&mut reader)
     }
 
-    pub fn read_all<R: BufRead>(reader: &mut R) -> Result<Vec<MonkeyInfo>, Box<dyn Error>> {
+    pub fn read_all<R: BufRead>(reader: &mut R) -> Result<Vec<MonkeyInfo>, Box<dyn Error>>
+    {
         let mut monkey_infos: Vec<MonkeyInfo> = Vec::new();
 
         loop {
-            match MonkeyInfo::read(reader)? {
+            match MonkeyInfoParser::read(reader)? {
                 None => {
                     return Ok(monkey_infos);
                 },
@@ -106,30 +102,31 @@ impl MonkeyInfo {
         }
     }
 
-    pub fn read<R: BufRead>(reader: &mut R) -> Result<Option<MonkeyInfo>, Box<dyn Error>> {
+    pub fn read<R: BufRead>(reader: &mut R) -> Result<Option<MonkeyInfo>, Box<dyn Error>>
+    {
         let mut line_buf = String::new();
 
-        if !MonkeyInfo::read_until_non_blank(reader, &mut line_buf)? {
+        if !MonkeyInfoParser::read_until_non_blank(reader, &mut line_buf)? {
             // At end of stream.
             return Ok(None);
         }
 
-        let id = MonkeyInfo::read_monkey_line(&mut line_buf)?;
+        let id = MonkeyInfoParser::read_monkey_line(&mut line_buf)?;
 
-        MonkeyInfo::read_next_line(reader, &mut line_buf, "starting items")?;
-        let items = MonkeyInfo::read_starting_items(&line_buf)?;
+        MonkeyInfoParser::read_next_line(reader, &mut line_buf, "starting items")?;
+        let items = MonkeyInfoParser::read_starting_items(&line_buf)?;
 
-        MonkeyInfo::read_next_line(reader, &mut line_buf, "operation")?;
-        let expression = MonkeyInfo::read_operation(&line_buf)?;
+        MonkeyInfoParser::read_next_line(reader, &mut line_buf, "operation")?;
+        let expression = MonkeyInfoParser::read_operation(&line_buf)?;
 
-        MonkeyInfo::read_next_line(reader, &mut line_buf, "test")?;
-        let test = MonkeyInfo::read_test(&line_buf)?;
+        MonkeyInfoParser::read_next_line(reader, &mut line_buf, "test")?;
+        let test = MonkeyInfoParser::read_test(&line_buf)?;
 
-        MonkeyInfo::read_next_line(reader, &mut line_buf, "test handler")?;
-        let h1 = MonkeyInfo::read_test_handler(&line_buf)?;
+        MonkeyInfoParser::read_next_line(reader, &mut line_buf, "test handler")?;
+        let h1 = MonkeyInfoParser::read_test_handler(&line_buf)?;
 
-        MonkeyInfo::read_next_line(reader, &mut line_buf, "test handler")?;
-        let h2 = MonkeyInfo::read_test_handler(&line_buf)?;
+        MonkeyInfoParser::read_next_line(reader, &mut line_buf, "test handler")?;
+        let h2 = MonkeyInfoParser::read_test_handler(&line_buf)?;
 
         if h1.0 == h2.0 {
             return Err(format!("Both test handlers have the same condition.").into());
@@ -177,11 +174,12 @@ impl MonkeyInfo {
         Ok(cap.get(1).unwrap().as_str().parse::<u32>()?)
     }
 
-    fn read_starting_items(line: &String) -> Result<Vec<u128>, Box<dyn Error>> {
+    fn read_starting_items(line: &String) -> Result<Vec<u64>, Box<dyn Error>>
+    {
         let starting_items_re = regex!(r"^\s*Starting items:\s+([\d,\s]+)\s*");
         let cap = starting_items_re.captures(&line).ok_or(format!("Invalid starting items: {}", line))?;
 
-        let mut items: Vec<u128> = Vec::new();
+        let mut items: Vec<u64> = Vec::new();
 
         for t in cap.get(1).unwrap().as_str().split(",") {
             let s = t.trim();
@@ -225,7 +223,7 @@ impl MonkeyInfo {
         }
     }
 
-    fn read_test(line: &String) -> Result<u128, Box<dyn Error>> {
+    fn read_test(line: &String) -> Result<u64, Box<dyn Error>> {
         let test_re = regex!(r"^\s*Test: divisible by (\d+)");
         let cap = test_re.captures(line).ok_or(format!("Invalid test: {}", line))?;
 
@@ -244,42 +242,50 @@ impl MonkeyInfo {
 }
 
 struct Monkees {
-    monkees: HashMap<u32, MonkeyInfo>
+    monkees: HashMap<u32, MonkeyInfo>,
+    ids: Vec<u32>
 }
 
 impl Monkees {
 
-    pub fn new() -> Monkees {
-        Monkees {
-            monkees: HashMap::new()
-        }
-    }
+    pub fn new<I>(monkees: I) -> Monkees
+        where I: IntoIterator<Item=MonkeyInfo>
+    {
+        let mut m = Monkees {
+            monkees: HashMap::new(),
+            ids: Vec::new()
+        };
 
-    pub fn add(&mut self, monkey: MonkeyInfo) {
-        self.monkees.insert(monkey.id, monkey);
-    }
-
-    pub fn add_all<I: IntoIterator<Item=MonkeyInfo>>(&mut self, monkees: I) {
         for monkey in monkees {
-            self.add(monkey);
+            let id = monkey.id;
+            m.monkees.insert(id, monkey);
+            m.ids.push(id);
+        }
+
+        m.ids.sort();
+
+        m
+    }
+
+    pub fn get_modulus(&self) -> u64 {
+        self.monkees.values().fold(1, |a, b| { a * b.test })
+    }
+
+    pub fn run_rounds<F>(&mut self, rounds: u32, manage_worry: F)
+        where F: Fn(&mut MonkeyInfo) -> ()
+    {
+        for _ in 1..=rounds {
+            self.run_round(&manage_worry);
         }
     }
 
-    pub fn get_ids(&mut self) -> Vec<u32> {
-        let mut m_ids: Vec<u32> = Vec::new();
-        for k in self.monkees.keys() {
-            m_ids.push(*k);
-        }
-        m_ids.sort();
-        m_ids
-    }
-
-    pub fn run_round<F: Fn(&mut MonkeyInfo) -> ()>(&mut self, monkey_maint_f: F) {
-        for m_id in self.get_ids() {
-            let monkey = self.monkees.get_mut(&m_id).unwrap();
+    pub fn run_round<F>(&mut self, manage_worry: F)
+        where F: Fn(&mut MonkeyInfo) -> ()
+    {
+        for m_id in &self.ids {
+            let monkey = self.monkees.get_mut(m_id).unwrap();
             monkey.inspect_items();
-            monkey_maint_f(monkey);
-            //monkey.reduce_worry();
+            manage_worry(monkey);
 
             let throws = monkey.test_and_get_throws();
             for (new_mid, item) in throws {
@@ -287,30 +293,45 @@ impl Monkees {
             }
         }
     }
-}
 
-fn run_part<F: Fn(&mut MonkeyInfo) -> ()>(input_path: String, _log: &mut String, monkey_maint_f: F) -> AocFunctionResult {
-    let mut monkees = Monkees::new();
-    let all_monkees = MonkeyInfo::read_all_from_file(&input_path)?;
-    monkees.add_all(all_monkees);
+    pub fn get_monkey_business(&self) -> u64 {
+        let mut counts: Vec<u32> = self.monkees.iter().map(|(_, m)| { m.inspection_count }).collect();
+        counts.sort();
 
-    for round in 1..=20 {
-        println!("On round: {}", round);
-        monkees.run_round(&monkey_maint_f);
+        let monkey_business = u64::from(counts[counts.len() - 1]) * u64::from(counts[counts.len() - 2]);
+        monkey_business
     }
 
-    let mut counts: Vec<u32> = monkees.monkees.iter().map(|(_, m)| { m.inspection_count }).collect();
-    counts.sort();
-
-    let monkey_business = counts[counts.len() - 1] * counts[counts.len() - 2];
-
-    Ok(format!("{}", monkey_business))
+    pub fn load(input_path: String) -> Result<Monkees, Box<dyn Error>> {
+        let all_monkees = MonkeyInfoParser::read_all_from_file(&input_path)?;
+        Ok(Monkees::new(all_monkees))
+    }
 }
 
 pub fn part1(input_path: String, _log: &mut String) -> AocFunctionResult {
-    run_part(input_path, _log, |m| { m.reduce_worry() })
+    let mut monkees = Monkees::load(input_path)?;
+
+    monkees.run_rounds(20, |m| {
+        for i in 0..m.items.len() {
+            m.items[i] = m.items[i] / 3;
+        }
+    });
+
+    let monkey_business = monkees.get_monkey_business();
+    Ok(format!("{}", monkey_business))
 }
 
+
 pub fn part2(input_path: String, _log: &mut String) -> AocFunctionResult {
-    run_part(input_path, _log, |m| { })
+    let mut monkees = Monkees::load(input_path)?;
+    let modulus = monkees.get_modulus();
+
+    monkees.run_rounds(10000, |m| {
+        for i in 0..m.items.len() {
+            m.items[i] = m.items[i] % modulus;
+        }
+    });
+
+    let monkey_business = monkees.get_monkey_business();
+    Ok(format!("{}", monkey_business))
 }

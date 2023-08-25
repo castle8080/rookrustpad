@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::error::Error;
-use std::fmt::Write;
 use std::fs::read_dir;
 use std::time::SystemTime;
 
